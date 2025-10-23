@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroSync | Self-Control Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #00f5ff;
+            --secondary: #7b61ff;
+            --accent: #ff2a6d;
+            --dark: #0a0e17;
+            --darker: #050811;
+            --card-bg: rgba(16, 18, 27, 0.6);
+            --glass: rgba(255, 255, 255, 0.05);
+            --text: #e2e8f0;
+            --text-secondary: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 42, 109, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(0, 245, 255, 0.05) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        .grid-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(12, 17, 31, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(12, 17, 31, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid var(--glass);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .logo-text {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .date-display {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            background: var(--glass);
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 968px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid var(--glass);
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-title i {
+            color: var(--primary);
+        }
+
+        .goal-setup {
+            grid-column: 1 / -1;
+        }
+
+        .task-input {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-field {
+            flex: 1;
+            background: var(--glass);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1rem;
+            color: var(--text);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(0, 245, 255, 0.2);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--dark);
+            border: none;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 245, 255, 0.4);
+        }
+
+        .btn-accent {
+            background: linear-gradient(135deg, var(--accent), #ff8a00);
+        }
+
+        .btn-accent:hover {
+            box-shadow: 0 5px 15px rgba(255, 42, 109, 0.4);
+        }
+
+        .progress-container {
+            position: relative;
+            height: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .progress-visual {
+            position: relative;
+            width: 180px;
+            height: 240px;
+            margin-bottom: 1rem;
+        }
+
+        .progress-glass {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px 20px 10px 10px;
+            height: 100%;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .progress-liquid {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: linear-gradient(to top, var(--primary), var(--secondary));
+            border-radius: 0 0 8px 8px;
+            transition: height 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 
+                0 0 20px rgba(0, 245, 255, 0.5),
+                inset 0 2px 10px rgba(255, 255, 255, 0.3);
+        }
+
+        .progress-bubbles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            bottom: 0;
+            animation: bubble-rise linear infinite;
+        }
+
+        @keyframes bubble-rise {
+            0% {
+                transform: translateY(0) scale(0.5);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(-240px) scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        .progress-stats {
+            text-align: center;
+        }
+
+        .progress-percent {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-text {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+
+        .control-btn {
+            background: var(--glass);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .event-log {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .event-list {
+            list-style: none;
+        }
+
+        .event-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: var(--glass);
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .event-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .event-time {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .triggers-box {
+            grid-column: 1 / -1;
+        }
+
+        .triggers-textarea {
+            width: 100%;
+            height: 150px;
+            background: var(--glass);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            color: var(--text);
+            font-size: 1rem;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+
+        .triggers-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(0, 245, 255, 0.2);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--glass);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .celebration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: var(--accent);
+            opacity: 0.8;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid var(--glass);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            justify-content: flex-end;
+        }
+
+        .success-message {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--dark);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            box-shadow: 0 5px 20px rgba(0, 245, 255, 0.4);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.5s ease;
+            z-index: 1500;
+        }
+
+        .success-message.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 245, 255, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 245, 255, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 245, 255, 0);
+            }
+        }
+
+        .completed .progress-liquid {
+            background: linear-gradient(to top, var(--accent), #ff8a00);
+            box-shadow: 
+                0 0 30px rgba(255, 42, 109, 0.7),
+                inset 0 2px 10px rgba(255, 255, 255, 0.4);
+        }
+
+        .glow {
+            text-shadow: 0 0 10px rgba(0, 245, 255, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-pattern"></div>
+    
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <div class="logo-text">NeuroSync</div>
+            </div>
+            <div class="date-display">
+                <i class="far fa-calendar"></i>
+                <span id="current-date">Loading...</span>
+            </div>
+        </header>
+
+        <div class="main-grid">
+            <div class="card goal-setup">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-bullseye"></i>
+                        Daily Mission Control
+                    </h2>
+                </div>
+                <div class="task-input">
+                    <input type="text" class="input-field" id="task-input" placeholder="Enter your controlled task for today...">
+                    <input type="number" class="input-field" id="goal-input" placeholder="Target reps" min="1" value="50">
+                    <button class="btn" id="set-goal-btn">
+                        <i class="fas fa-rocket"></i>
+                        Set Mission
+                    </button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="current-reps">0</div>
+                        <div class="stat-label">Current Reps</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="daily-goal">50</div>
+                        <div class="stat-label">Daily Goal</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="completion-rate">0%</div>
+                        <div class="stat-label">Completion Rate</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card progress-card" id="progress-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-vial"></i>
+                        Progress Matrix
+                    </h2>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-visual">
+                        <div class="progress-glass">
+                            <div class="progress-liquid" id="progress-liquid"></div>
+                            <div class="progress-bubbles" id="bubbles-container"></div>
+                        </div>
+                    </div>
+                    <div class="progress-stats">
+                        <div class="progress-percent" id="progress-percent">0%</div>
+                        <div class="progress-text" id="progress-text">Mission Progress</div>
+                    </div>
+                </div>
+                <div class="controls">
+                    <div class="control-btn" id="add-rep-btn">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <button class="btn btn-accent" id="i-came-btn">
+                        <i class="fas fa-tint"></i>
+                        I Came
+                    </button>
+                    <div class="control-btn" id="reset-reps-btn">
+                        <i class="fas fa-redo"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-history"></i>
+                        Event Log
+                    </h2>
+                    <button class="control-btn" id="clear-events-btn">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                <div class="event-log">
+                    <ul class="event-list" id="event-list">
+                        <!-- Events will be added here dynamically -->
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card triggers-box">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Triggers Analysis
+                    </h2>
+                </div>
+                <textarea class="triggers-textarea" id="triggers-textarea" placeholder="Log your triggers, distractions, or urges here... This data helps optimize your self-control algorithm."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="celebration" id="celebration"></div>
+
+    <div class="modal" id="congrats-modal">
+        <div class="modal-content">
+            <h2 class="modal-title">Mission Accomplished!</h2>
+            <p>Your self-control algorithm has successfully completed today's mission. The neural pathways are strengthening.</p>
+            <div class="modal-actions">
+                <button class="btn" id="continue-btn">
+                    <i class="fas fa-sync"></i>
+                    Continue Tracking
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="success-message" id="success-message">
+        <i class="fas fa-check-circle"></i>
+        <span>Event logged successfully</span>
+    </div>
+
+    <script>
+        // DOM Elements
+        const currentDateEl = document.getElementById('current-date');
+        const taskInput = document.getElementById('task-input');
+        const goalInput = document.getElementById('goal-input');
+        const setGoalBtn = document.getElementById('set-goal-btn');
+        const currentRepsEl = document.getElementById('current-reps');
+        const dailyGoalEl = document.getElementById('daily-goal');
+        const completionRateEl = document.getElementById('completion-rate');
+        const progressCard = document.getElementById('progress-card');
+        const progressLiquid = document.getElementById('progress-liquid');
+        const progressPercent = document.getElementById('progress-percent');
+        const progressText = document.getElementById('progress-text');
+        const addRepBtn = document.getElementById('add-rep-btn');
+        const iCameBtn = document.getElementById('i-came-btn');
+        const resetRepsBtn = document.getElementById('reset-reps-btn');
+        const eventList = document.getElementById('event-list');
+        const clearEventsBtn = document.getElementById('clear-events-btn');
+        const triggersTextarea = document.getElementById('triggers-textarea');
+        const celebration = document.getElementById('celebration');
+        const congratsModal = document.getElementById('congrats-modal');
+        const continueBtn = document.getElementById('continue-btn');
+        const successMessage = document.getElementById('success-message');
+        const bubblesContainer = document.getElementById('bubbles-container');
+
+        // App State
+        let state = {
+            dailyGoal: 50,
+            currentReps: 0,
+            task: '',
+            events: [],
+            triggers: '',
+            lastReset: new Date().toDateString()
+        };
+
+        // Initialize the app
+        function init() {
+            loadState();
+            updateDate();
+            render();
+            createBubbles();
+            
+            // Set up event listeners
+            setGoalBtn.addEventListener('click', setDailyGoal);
+            addRepBtn.addEventListener('click', () => updateReps(1));
+            iCameBtn.addEventListener('click', logEvent);
+            resetRepsBtn.addEventListener('click', resetReps);
+            clearEventsBtn.addEventListener('click', clearEvents);
+            triggersTextarea.addEventListener('input', saveTriggers);
+            continueBtn.addEventListener('click', closeModal);
+            
+            // Check if it's a new day
+            checkNewDay();
+        }
+
+        // Load state from localStorage
+        function loadState() {
+            const saved = localStorage.getItem('neuroSyncState');
+            if (saved) {
+                state = JSON.parse(saved);
+                
+                // Check if it's a new day
+                const today = new Date().toDateString();
+                if (state.lastReset !== today) {
+                    state.currentReps = 0;
+                    state.lastReset = today;
+                    saveState();
+                }
+            }
+            
+            // Update UI with loaded state
+            taskInput.value = state.task;
+            goalInput.value = state.dailyGoal;
+            triggersTextarea.value = state.triggers;
+        }
+
+        // Save state to localStorage
+        function saveState() {
+            localStorage.setItem('neuroSyncState', JSON.stringify(state));
+        }
+
+        // Update current date display
+        function updateDate() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            currentDateEl.textContent = now.toLocaleDateString('en-US', options);
+        }
+
+        // Check if it's a new day and reset if needed
+        function checkNewDay() {
+            const today = new Date().toDateString();
+            if (state.lastReset !== today) {
+                state.currentReps = 0;
+                state.lastReset = today;
+                saveState();
+                render();
+            }
+        }
+
+        // Set daily goal and task
+        function setDailyGoal() {
+            const goal = parseInt(goalInput.value);
+            const task = taskInput.value.trim();
+            
+            if (goal && goal > 0) {
+                state.dailyGoal = goal;
+                state.task = task;
+                saveState();
+                render();
+                
+                // Show success message
+                showSuccess('Mission parameters updated');
+            } else {
+                alert('Please enter a valid goal (positive number)');
+            }
+        }
+
+        // Update reps
+        function updateReps(amount) {
+            state.currentReps += amount;
+            
+            // Cap at daily goal
+            if (state.currentReps > state.dailyGoal) {
+                state.currentReps = state.dailyGoal;
+            }
+            
+            // Check if goal is completed
+            if (state.currentReps >= state.dailyGoal) {
+                progressCard.classList.add('completed');
+                showCelebration();
+                showModal();
+            }
+            
+            saveState();
+            render();
+        }
+
+        // Reset reps
+        function resetReps() {
+            state.currentReps = 0;
+            progressCard.classList.remove('completed');
+            saveState();
+            render();
+        }
+
+        // Log "I Came" event
+        function logEvent() {
+            const now = new Date();
+            const event = {
+                id: Date.now(),
+                timestamp: now.toISOString(),
+                time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            
+            state.events.unshift(event);
+            
+            // Keep only last 10 events
+            if (state.events.length > 10) {
+                state.events = state.events.slice(0, 10);
+            }
+            
+            saveState();
+            renderEvents();
+            showSuccess('Event logged to database');
+        }
+
+        // Clear all events
+        function clearEvents() {
+            if (confirm('Clear all logged events?')) {
+                state.events = [];
+                saveState();
+                renderEvents();
+            }
+        }
+
+        // Save triggers
+        function saveTriggers() {
+            state.triggers = triggersTextarea.value;
+            saveState();
+        }
+
+        // Render the app
+        function render() {
+            // Update stats
+            currentRepsEl.textContent = state.currentReps;
+            dailyGoalEl.textContent = state.dailyGoal;
+            
+            const completionRate = state.dailyGoal > 0 ? 
+                Math.round((state.currentReps / state.dailyGoal) * 100) : 0;
+            completionRateEl.textContent = `${completionRate}%`;
+            
+            // Update progress bar
+            const progress = state.dailyGoal > 0 ? 
+                Math.min((state.currentReps / state.dailyGoal) * 100, 100) : 0;
+                
+            progressLiquid.style.height = `${progress}%`;
+            progressPercent.textContent = `${Math.round(progress)}%`;
+            
+            // Update progress text
+            if (progress >= 100) {
+                progressText.innerHTML = '<span class="glow">Mission Accomplished!</span>';
+            } else if (progress >= 75) {
+                progressText.textContent = 'Almost there!';
+            } else if (progress >= 50) {
+                progressText.textContent = 'Halfway to target';
+            } else if (progress >= 25) {
+                progressText.textContent = 'Making progress';
+            } else {
+                progressText.textContent = 'Mission in progress';
+            }
+            
+            // Render events
+            renderEvents();
+        }
+
+        // Render events list
+        function renderEvents() {
+            eventList.innerHTML = '';
+            
+            if (state.events.length === 0) {
+                eventList.innerHTML = '<li class="event-item">No events logged today</li>';
+                return;
+            }
+            
+            state.events.forEach(event => {
+                const li = document.createElement('li');
+                li.className = 'event-item';
+                li.innerHTML = `
+                    <div>
+                        <i class="fas fa-tint" style="color: var(--accent);"></i>
+                        <span>Self-control event</span>
+                    </div>
+                    <div class="event-time">${event.time}</div>
+                `;
+                eventList.appendChild(li);
+            });
+        }
+
+        // Create bubbles for progress visualization
+        function createBubbles() {
+            // Clear existing bubbles
+            bubblesContainer.innerHTML = '';
+            
+            // Create multiple bubbles
+            for (let i = 0; i < 15; i++) {
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                
+                // Randomize bubble properties
+                const size = Math.random() * 10 + 5;
+                const left = Math.random() * 100;
+                const delay = Math.random() * 10;
+                const duration = Math.random() * 10 + 10;
+                
+                bubble.style.width = `${size}px`;
+                bubble.style.height = `${size}px`;
+                bubble.style.left = `${left}%`;
+                bubble.style.animationDelay = `${delay}s`;
+                bubble.style.animationDuration = `${duration}s`;
+                
+                bubblesContainer.appendChild(bubble);
+            }
+        }
+
+        // Show celebration animation
+        function showCelebration() {
+            celebration.style.display = 'block';
+            celebration.innerHTML = '';
+            
+            // Create confetti
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                
+                // Randomize confetti properties
+                const left = Math.random() * 100;
+                const color = i % 3 === 0 ? 'var(--primary)' : i % 3 === 1 ? 'var(--secondary)' : 'var(--accent)';
+                const size = Math.random() * 10 + 5;
+                const delay = Math.random() * 2;
+                const duration = Math.random() * 3 + 2;
+                
+                confetti.style.left = `${left}%`;
+                confetti.style.background = color;
+                confetti.style.width = `${size}px`;
+                confetti.style.height = `${size}px`;
+                confetti.style.animation = `fall ${duration}s linear ${delay}s infinite`;
+                
+                celebration.appendChild(confetti);
+            }
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                celebration.style.display = 'none';
+            }, 5000);
+        }
+
+        // Show modal
+        function showModal() {
+            congratsModal.style.display = 'flex';
+        }
+
+        // Close modal
+        function closeModal() {
+            congratsModal.style.display = 'none';
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            successMessage.querySelector('span').textContent = message;
+            successMessage.classList.add('show');
+            
+            setTimeout(() => {
+                successMessage.classList.remove('show');
+            }, 3000);
+        }
+
+        // Add CSS for confetti fall animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fall {
+                0% {
+                    transform: translateY(-100px) rotate(0deg);
+                    opacity: 1;
+                }
+                100% {
+                    transform: translateY(100vh) rotate(360deg);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
